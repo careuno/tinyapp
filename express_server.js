@@ -12,7 +12,7 @@ const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
 
-const bodyParser = require("body-parser"); //converts the request body from a buffer (sent via POST method) into a string to read, then it will add the data to ethe req(request) object under the key body/ 
+const bodyParser = require("body-parser"); //converts the request body from a buffer (sent via POST method) into a string to read, then it will add the data to the req(request) object under the key body/ 
 app.use(bodyParser.urlencoded({extended: true}));
 
 const generateRandomString = function(){
@@ -21,7 +21,9 @@ const generateRandomString = function(){
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "9sm5xK": "http://www.google.com",
+  "7het6D": "https://web.compass.lighthouselabs.ca/days/w03d2/activities/485",
+  "3hdk4e": "https://marketplace.visualstudio.com/items?itemName=shardulm94.trailing-spaces"
 };
 
 //notice the line of code that registers a handler on the root path, '/' 
@@ -30,7 +32,8 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = {urls: urlDatabase}; // ASK MENTOR- urlDatabase is already an object.. why must be put into another object?
+  const templateVars = {urls: urlDatabase
+  }; // ASK MENTOR- urlDatabase is already an object.. why must be put into another object?
   res.render("urls_index", templateVars); // this is passing in our database "urlDatabse" to render
 });
 
@@ -47,6 +50,11 @@ app.post("/urls", (req, res) => {
   //-> http://localhost:8080/urls/b2xVn2
 });                       //It's being parsed into a JS object where longURL is the key inside request? (with the use of bodyParser); 
 
+app.post("/urls/:shortURL/delete", (req, res) => {
+  let URLtoDelete = req.params.shortURL;
+  delete urlDatabase[URLtoDelete];  //--->  urlDatabase["b2xVn2"] = "http://www.lighthouselabs.ca"... delete "http://www.lighthouselabs.ca"// show where you want to delete it from   
+  res.redirect("/urls/"); 
+});                   
 
 //routes should be ordered from most specific to least specific
 app.get("/urls/new", (req, res) => {
