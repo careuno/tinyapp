@@ -1,2 +1,3 @@
 node_modules/
-NOTES.js
+ NOTES -Setting up express server + tinyapp notes.js
+        views/urls_new.ejs
