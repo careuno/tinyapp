@@ -12,6 +12,13 @@ const app = express();
 const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
 
+const bodyParser = require("body-parser"); //converts the request body from a buffer (sent via POST method) into a string to read, then it will add the data to ethe req(request) object under the key body/ 
+app.use(bodyParser.urlencoded({extended: true}));
+
+const generateRandomString = function(){
+  return Math.random().toString(20).substr(2, 6)
+}
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -25,6 +32,18 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   const templateVars = {urls: urlDatabase};
   res.render("urls_index", templateVars);
+});
+
+app.post("/urls", (req, res) => {
+  console.log(req.body);  // Log the POST request body to the console
+  let shortURL = generateRandomString;
+  res.send(`/urls/:${shortURL}`); // Respond with 'Ok' (we will replace this) //req.body prints {longURL: 'with whatever is inputted from the browser in the input field'}
+  urlDatabase[shortURL] = req.body.longURL;               
+});                       //It's being parsed into a JS object where longURL is the key; 
+
+//routes should be ordered from most specific to least specific
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
 });
 
 app.get("/urls/:shortURL", (req, res) => {
