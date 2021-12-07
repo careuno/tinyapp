@@ -1,3 +1,12 @@
+/* 
+• Implement a basic web server using the Express.js framework.
+https://web.compass.lighthouselabs.ca/days/w03d1/activities/169
+
+• Created a web server that has different responses depending on which route you visit. 
+
+• Learned how to test our web server using both our browser and the command line utility curl.
+ */
+
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
