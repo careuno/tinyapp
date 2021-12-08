@@ -54,7 +54,16 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   let URLtoDelete = req.params.shortURL;
   delete urlDatabase[URLtoDelete];  //--->  urlDatabase["b2xVn2"] = "http://www.lighthouselabs.ca"... delete "http://www.lighthouselabs.ca"// show where you want to delete it from   
   res.redirect("/urls/"); 
-});                   
+});      
+
+
+///HERE we are trying to update an edited longURL 
+app.post("/urls/:id", (req, res) => {
+  //console.log(req.params) //{ id: '9sm5xK' }, you can see req params in this is for id
+  let newLongURL = req.body.longURL
+  urlDatabase[req.params.id] = newLongURL
+  res.redirect("/urls/"); 
+});  
 
 //routes should be ordered from most specific to least specific
 app.get("/urls/new", (req, res) => {
