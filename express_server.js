@@ -14,6 +14,8 @@ app.set("view engine", "ejs");
 
 const bodyParser = require("body-parser"); //converts the request body from a buffer (sent via POST method) into a string to read, then it will add the data to the req(request) object under the key body/ 
 app.use(bodyParser.urlencoded({extended: true}));
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 
 const generateRandomString = function(){
   return Math.random().toString(20).substr(2, 6)
@@ -26,14 +28,17 @@ const urlDatabase = {
   "3hdk4e": "https://marketplace.visualstudio.com/items?itemName=shardulm94.trailing-spaces"
 };
 
+
+
 //notice the line of code that registers a handler on the root path, '/' 
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = {urls: urlDatabase
+  const templateVars = {urls: urlDatabase, username: req.cookies["username"]
   }; // ASK MENTOR- urlDatabase is already an object.. why must be put into another object?
+  //console.log('templateVars',templateVars)
   res.render("urls_index", templateVars); // this is passing in our database "urlDatabse" to render
 });
 
@@ -50,12 +55,23 @@ app.post("/urls", (req, res) => {
   //-> http://localhost:8080/urls/b2xVn2
 });                       //It's being parsed into a JS object where longURL is the key inside request? (with the use of bodyParser); 
 
+
+app.post("/login", (req, res) => {
+  // console.log(req.body) //prints { username: 'karuno' }
+  res.cookie('username', req.body.username);//res.cookie takes two params (key,value) --> you can put any name you want to see when looking at cookies
+  res.redirect("/urls/"); 
+});   
+app.post("/logout", (req, res) => {
+  res.clearCookie('username');//res.cookie takes two params (key,value) --> you can put any name you want to see when looking at cookies
+  res.redirect("/urls/"); 
+});   
+
+
 app.post("/urls/:shortURL/delete", (req, res) => {
   let URLtoDelete = req.params.shortURL;
   delete urlDatabase[URLtoDelete];  //--->  urlDatabase["b2xVn2"] = "http://www.lighthouselabs.ca"... delete "http://www.lighthouselabs.ca"// show where you want to delete it from   
   res.redirect("/urls/"); 
 });      
-
 
 ///HERE we are trying to update an edited longURL 
 app.post("/urls/:id", (req, res) => {
@@ -67,7 +83,8 @@ app.post("/urls/:id", (req, res) => {
 
 //routes should be ordered from most specific to least specific
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");  // requesting to go to /urls/new route and we are going to render the .ejs file urls_new
+  const templateVars = {username: req.cookies["username"]}
+  res.render("urls_new", templateVars);  // requesting to go to /urls/new route and we are going to render the .ejs file urls_new
 });
 
 
@@ -76,7 +93,7 @@ app.get("/urls/:shortURL", (req, res) => {    //after clicking submit app.post t
 // ->req.params.shortURL = b2xVn2
 // we want shortURL + longURL, but we only have shortURL, which is -> b2xVn2
 // to find longURL, we are looking it up from our database. which is -> urlDatabase[b2xVn2]
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]};
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies["username"]};
   //reason why we put these two into an object -> because we need to pass it to the ejs file as an object so the file can access it
   
   res.render("urls_show", templateVars); //http://localhost:8080/urls/7017cf on this page you want to render the longURL and shortURL so that is why you define it w/TemplateVars
@@ -96,3 +113,12 @@ app.get("/urls.json", (req, res) => {
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
+
+// //when you manipulate arrays you need to use the spread operator bar = [...foo] to copy cause 
+// //it shares 
+// const foo = [1, 2];
+// const bar = foo;
+
+// bar[0] = 9;
+
+// console.log(foo[0], bar[0]); // => 9, 9
