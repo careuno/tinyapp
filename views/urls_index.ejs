@@ -42,6 +42,7 @@
            <tr>
             <td><%= url %></td>
             <td><%= urls[url] %></td>
+            <td><form method="GET" action="/urls/<%= url %>"><button type="submit" class="btn btn-outline-primary">Edit</button></form></td> 
             <td><form method="POST" action="/urls/<%= url %>/delete"><button type="submit" class="btn btn-outline-danger">Delete</button></form></td>            
           <!-- https://getbootstrap.com/docs/4.0/components/buttons/ to see the button classes you can use -->
           <!-- you want to use crocodile clips with = if you want it to output, also above in action you need to work with the variables you have access to, in this .ejs when rendered you passed templateVars and you looped through it and defined url in urls so when you want to define the path the button is linked to reflect the short url of the urls object, you will want to use url in crocodile clips as seen on line 45-->
