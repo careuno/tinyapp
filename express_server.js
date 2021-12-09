@@ -150,7 +150,7 @@ app.post("/register", (req, res) => {
  
 
   if (user){
-    return res.status(400).send("there is already a user signed up with that email");
+    return res.status(400).send("Error 400: There is already a user signed up with that email");
   }
 
  users[randomID] = {
