@@ -8,14 +8,6 @@
  <html lang="en">
  <head>
    <style> 
-   /* .button1 {
-    background-color: white;
-    color: #cc3a40;
-    border: 1px solid #cc3a40;
-    border-radius: 4px;
-    padding: 7px 13px;
-    font-weight: 500; */
-  }
   </style>
    <meta charset="utf-8">
    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -33,32 +25,33 @@
   <%}%>
    <main style="margin: 1em;">
      <h3>My URLs</h3>
-     <% if (!user){%>
-      <div class="d-flex flex-column align-items-center card-footer text-muted">
-        <div><h2 class="card-title"><em>Please register or login to view your URLs</em></h2></div>
-      </div>
-      <%} else {%>
+     <% if (user){%>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Short URL</th>
+            <th scope="col">Long URL</th>
+            <th scope="col">Edit</th>
+            <th scope="col">Delete</th>
+           </tr>
+         </thead>
+         <tbody>
+           <!-- const templateVars = {urls: urlDatabase} -->
+             <% for(let url in urls) { %>
+            <tr>
+             <td><%= url %></td>
+             <td><%= urls[url]["longURL"] %></td>
+             <td><form method="GET" action="/urls/<%= url %>"><button type="submit" class="btn btn-outline-primary">Edit</button></form></td> 
+             <td><form method="POST" action="/urls/<%= url %>/delete"><button type="submit" class="btn btn-outline-danger">Delete</button></form></td>            
+           <!-- https://getbootstrap.com/docs/4.0/components/buttons/ to see the button classes you can use -->
+           <!-- you want to use crocodile clips with = if you want it to output, also above in action you need to work with the variables you have access to, in this .ejs when rendered you passed templateVars and you looped through it and defined url in urls so when you want to define the path the button is linked to reflect the short url of the urls object, you will want to use url in crocodile clips as seen on line 45-->
+             <%}%>
+             <%} else {%>
+              <div class="d-flex flex-column align-items-center card-footer text-muted">
+                <div><h2 class="card-title text-center text-info"><br> Save and shorten your URLs to easily access a long link. <br>It's as simple as that. 
+                  <br></h2><h3 class="card-title text-center text-muted"><br><br><em>Please <a class="text-info" href="/register">register</a> or <a class="text-info" href="/login">login</a> to create and view your URLs.</em><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br></h3></div>
+              </div>
       
-     <table class="table">
-       <thead>
-         <tr>
-           <th scope="col">Short URL</th>
-           <th scope="col">Long URL</th>
-           <th scope="col">Edit</th>
-           <th scope="col">Delete</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- const templateVars = {urls: urlDatabase} -->
-            <% for(let url in urls) { %>
-           <tr>
-            <td><%= url %></td>
-            <td><%= urls[url]["longURL"] %></td>
-            <td><form method="GET" action="/urls/<%= url %>"><button type="submit" class="btn btn-outline-primary">Edit</button></form></td> 
-            <td><form method="POST" action="/urls/<%= url %>/delete"><button type="submit" class="btn btn-outline-danger">Delete</button></form></td>            
-          <!-- https://getbootstrap.com/docs/4.0/components/buttons/ to see the button classes you can use -->
-          <!-- you want to use crocodile clips with = if you want it to output, also above in action you need to work with the variables you have access to, in this .ejs when rendered you passed templateVars and you looped through it and defined url in urls so when you want to define the path the button is linked to reflect the short url of the urls object, you will want to use url in crocodile clips as seen on line 45-->
-            <%}%>
             <%}%>
        </tbody>
      </table>

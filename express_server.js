@@ -1,30 +1,29 @@
-/* TINY APP PROJECT
-• Implement a basic web server using the Express.js framework with different responses depending on the route you visit.
-https://web.compass.lighthouselabs.ca/days/w03d1/activities/169
-• Learned how to test our web server using both our browser and the command line utility curl.
- */
+//----------------TINYAPP PROJECT----------------------------------------------
+
+const {findUserByEmail} = require("./helpers");
 
 const express = require("express");
-//do we need morgan?
 const app = express();
-const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
+const PORT = 8080; // default port 8080
+
+//--------------- MIDDLEWARE --------------------------------------------------
+const bcrypt = require("bcryptjs");
+const salt = bcrypt.genSaltSync(10);
 
 const bodyParser = require("body-parser"); //converts the request body from a buffer (sent via POST method) into a string to read, then it will add the data to the req(request) object under the key body/
 app.use(bodyParser.urlencoded({extended: true}));
+
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
-const generateRandomString = function() {
-  return Math.random().toString(20).substr(2, 6);
-};
+const cookieSession = require('cookie-session');
+app.use(cookieSession({
+  name: "session",
+  keys: ["I like potatoes and cheese","key"]
+}));
 
-// const urlDatabase = { //OLD DATABASE
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com",
-//   "7het6D": "https://web.compass.lighthouselabs.ca/days/w03d2/activities/485",
-//   "3hdk4e": "https://marketplace.visualstudio.com/items?itemName=shardulm94.trailing-spaces"
-// };
+//--------------- DATABASE & HELPER FUNCTIONS ------------------------------------
 
 const urlDatabase = {
   b6UTxQ: {
@@ -50,17 +49,22 @@ const users = {
   }
 };
 
-const findUserByEmail = (email) => {
- 
-  for (const usersKeys in users) {
-    const user = users[usersKeys];
-    if (user.email === email) {
-      return user;
-    }
-  }
-  return null;
+// Function to generate random 6 character string for the short URL.
+const generateRandomString = function() {
+  return Math.random().toString(20).substr(2, 6);
 };
 
+// Function to pass error messages with HTML with either or "Login / Sign UP".
+const errorLoginSignUpLink = function(errorMsg) {
+  return `<div style="padding-top: 80px;"><style> body { background-color: #4ba0b5;} </style><h1 style="color: #FFFFFF;font-size:60px;font-family:helvetica;text-align:center;margin:30px;">${errorMsg}<br><br><a href=/login style="color: #FFFFFF;"> Login</a> / <a href=/register style="color: #FFFFFF;">Sign Up</a></h1></div>`;
+}; 
+
+// Function to pass error messages with HTML with either "Return to homepage".
+const errorReturnHome = function(errorMsg) {
+  return `<div style="padding-top: 80px;"><style> body { background-color: #4ba0b5;} </style><h1 style="color: #FFFFFF;font-size:60px;font-family:helvetica;text-align:center;margin:30px;">${errorMsg}<br><br><a href=/urls style="color: #FFFFFF;"> Return to TinyApp homepage. </a></h1>`;
+}; 
+
+// Function to filter out URLs from the database and send only the URLs that correlate to user. See app.get("/urls")
 const urlsForUser = function(id) {
   const userURLObj = {};
   for (let shortUrl in urlDatabase) {
@@ -72,187 +76,167 @@ const urlsForUser = function(id) {
   return userURLObj;
 };
 
-//const authenticateUser = (email, password, db) => {
-// if (!potentialUser) {
-//   return {err:"No user with that email", data: null};
-// }
-// if (potentialUser.password !== password) {
-//   return {err:"Password not matching", data:null};
-// }
-//   return {err:null, data:potentialUser}
 
-// };
-//const result = authenticateUser(email, password, userDatabaseIsh)
-
-/* if(result.err) {
-  console.log... see Francis Lecture to understand creating a helper function we can use for TinyApp
-} */
-
-
-//notice the line of code that registers a handler on the root path, '/'
+//--------------- MAIN  / -------------------------PUBLIC ACCESS--------------------------
 app.get("/", (req, res) => {
-  res.send("Hello!");
+   //NOTE: Currently no persisting database if server shuts down
+   //You can have cookies with no matching user data in this project if you restart the server but not log out from the browser
+
+   //Checking whether you are logged in checks for cookie + data in database
+   const userCookieID = req.session["user_id"];
+   const loggedInUser = users[userCookieID]; 
+
+        //Current situation (no persisting data): 
+        //----- if cookie but (restart server) no data ===> no user therefore need to act as if not logged in + NOT EVEN REGISTERED ---> return res.redirect("/register"); (makes more sense but COMPASS says redirect to /login)
+        
+        //Future situation (persisting data):
+        //----- if cookie but (restart server) yes data ===> return res.redirect("/login"); and or redirect to ("/urls") since you are logged in. 
+
+        //Future situation (persisting data):
+        //----- if no cookie but data in database (say they deleted cookies/cache etc.) ===> we don't know the user is who they say they are, unless there is a cookie so we give them BOTH options LOGIN / SIGN UP so they can choose. 
+
+  if (!loggedInUser) {  //if there is no cookie/and no data.. should redirect to /register but COMPASS said redirect to /login 
+    return res.redirect("/login");
+  }
+  return res.redirect("/urls");
 });
 
-//--------------- MAIN -------------------------PUBLIC ACCESS--------------------------
+//--------------- MAIN /urls -------------------------PUBLIC ACCESS--------------------------
 app.get("/urls", (req, res) => {
-  const userCookieID = req.cookies["user_id"];
-  const user = users[userCookieID];
-  //const templateVars = {urls: urlDatabase, user: user
-  //}; // ASK MENTOR- urlDatabase is already an object.. why must be put into another object? So you can manipulate it
-  //console.log('templateVars',templateVars)
-
-  // if user is not logged in OR accessing through curl ------> did the condition on .ejs outputting HTML message
-  // if (!userCookieID) {  //doing it this way would make it difficult for new users to register or login
-  //   res.status(403).send("Error 403: User needs to be logged in.")
-  //} else {
-  const templateVars = { urls: urlsForUser(userCookieID), user: user };
+  const userCookieID = req.session.user_id;
+  const loggedInUser = users[userCookieID];
+  const templateVars = { urls: urlsForUser(userCookieID), user: loggedInUser };
   res.render("urls_index", templateVars);
-  //}
 });
 
 //----------- PAGE: whenever you request shortURL in browser---------PUBLIC ACCESS-----------
-app.get("/u/:shortURL", (req, res) => {  // ":" variable/parameter in a URL, since it's a .get, you are requesting so the parameters you want to access are in req
-  // console.log('urlDatabase[req.params.shortURL]', urlDatabase[req.params.shortURL])
+app.get("/u/:shortURL", (req, res) => {  //COMPASS requirements page named this u/:id, changed for clarity
   const shortURL = req.params.shortURL;
-  if (!urlDatabase[shortURL]) {
-    res.status(403).send("Error 403: This url shortcut does not exist.");
+  if (!urlDatabase[shortURL]) { 
+    const errorMsg = 'ERROR 404: This URL shortcut does not exist.'
+    return res.status(403).send(errorReturnHome(errorMsg));
   } else {
-    const longURL = urlDatabase[shortURL]["longURL"];  //when inputting url from browser it must start with http:// for it to redirect properly
-    res.redirect(longURL);        //shortURL is inside req.param
+    const longURL = urlDatabase[shortURL]["longURL"];
+    return res.redirect(longURL);
   }
 });
 
-//--------------- PAGE: CREATE NEW URL ---------------------------USER ACCESS/COOKIE-----------------
-//routes should be ordered from most specific to least specific
+//--------------- PAGE: CREATE NEW URL ------------------USER ACCESS/COOKIE-----------------
 //Here we are going to Create New URL
 app.get("/urls/new", (req, res) => {
-  const userCookieID = req.cookies["user_id"];
+  const userCookieID = req.session["user_id"];
   const user = users[userCookieID];
   const templateVars = { user: user
   };
-  if (!userCookieID) {
-    res.redirect("/login");
+  if (!user) {
+    return res.redirect("/login");
   }
-  res.render("urls_new", templateVars);  // requesting to go to /urls/new route and we are going to render the .ejs file urls_new
+  res.render("urls_new", templateVars);//requesting to go to /urls/new route and we are going to render the .ejs file urls_new
 });
 
-//--------------- ACTION: CREATE NEW URL ---------------------------USER ACCESS/COOKIE-----------------
-app.post("/urls/new", (req, res) => {             //I decided to rename this from /urls to urls/new for my own clarity, NOTE- adjust .ejs and any curl commands to also include '/new'
-  const userCookieID = req.cookies["user_id"];
-  if (!userCookieID) {
-    return res.status(403).send("Error 403: You must login before creating a URL.");
+//--------------- ACTION: CREATE NEW URL ------------------USER ACCESS/COOKIE-----------------
+app.post("/urls/new", (req, res) => { //decided to rename this from /urls to urls/new for my own clarity, NOTE- adjust .ejs and any curl commands to also include '/new'
+  //curl -X POST -i localhost:8080/urls/new/  
+  const userCookieID = req.session["user_id"];
+  const loggedInUser = users[userCookieID];
+  if (!loggedInUser) { 
+    return res.status(403).send('ERROR 403: You must login before creating a URL.');//won't be able to see from browser so HTML is pointless and makes curl hard to read error, therefore sending a string.
   }
-  //console.log(req.body);  // Log the POST request body to the console
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: userCookieID};//assigning shortURL to the object with the longURL
-  console.log ('urlDatabase during post', urlDatabase)
-  res.redirect(`/urls/${shortURL}`); //req.body prints {longURL: 'with whatever is inputted from the browser in the input field'}
-  //-> http://localhost:8080/urls/b2xVn2
-});//It's being parsed into a JS object where longURL is the key inside request? (with the use of bodyParser);
+  urlDatabase[shortURL] = { longURL: req.body.longURL, userID: userCookieID};//assigning shortURL to the object with the longURL provided from form
+  res.redirect(`/urls/${shortURL}`);
+});
 
 
 //--------- PAGE: SPECIFIC URL PAGE + SHOW US EDIT LINK --------USER ACCESS/COOKIE----------
-app.get("/urls/:shortURL", (req, res) => {    //after clicking submit app.post triggers and then you are redirected to a new page here that requests html and you can see the html at urls_show.ejs
-//->http://localhost:8080/urls/b2xVn2
-// ->req.params.shortURL = b2xVn2
-// we want shortURL + longURL, but we only have shortURL, which is -> b2xVn2
-// to find longURL, we are looking it up from our database. which is -> urlDatabase[b2xVn2]
+app.get("/urls/:shortURL", (req, res) => {  //COMPASS requirements page named this /urls/:id
+const shortURL = req.params.shortURL;
+const userCookieID = req.session["user_id"];
+const loggedInUser = users[userCookieID]; //send whole user object (with id, email and password associated to id key).
 
-//console.log('urlDatabase during get', urlDatabase)
-//TEST ------- if no cookies/logged out... do not render edit page
-if (!req.cookies["user_id"]) {
-  res.status(403).send("Error 403: Must log in to make edits.");
-}
+  //when Create New URL and clicking submit, app.post triggers and then you are redirected to a new page here that requests html at urls_show.ejs
 
-// TEST ------ if shortURL doesn't exist
-if (!urlDatabase[req.params.shortURL]) {  //
-  return res.status(403).send("Error 404: Invalid request. Link does not exist.");
-}
+  // TEST ------ if shortURL Edit Page doesn't exist.
+  if (!urlDatabase[shortURL]) { 
+    const errorMsg = 'ERROR 404: Invalid request. Link is not found.'
+    return res.status(404).send(errorReturnHome(errorMsg));
+  }
+  
+  //TEST ------- if no cookies/logged out... do not render edit page.
+  if (!loggedInUser) { 
+    const errorMsg = 'ERROR 403: Must log in to make edits.'
+    return res.status(403).send(errorLoginSignUpLink(errorMsg));
+  }
+  
+  // TEST ------ if shortURL DOES exist but logged in User isn't owner of that link they are trying to edit, don't render edit page.
+  const ownerOfUrlID = urlDatabase[shortURL]['userID']; //'userID' refers to the ownerID associated to the URL. Used in the urlDatabase.
+  const templateVars = { shortURL: shortURL, longURL: urlDatabase[shortURL]["longURL"], user: loggedInUser};
 
-//*** check each get request see if it behaves the way expected when logged out and what happens if you go to a bogus link while logged out or in
-
-  //reason why we put these two into an object -> because we need to pass it to the ejs file as an object so the file can access it\\const userCookieID = req.cookies["user_id"]
-  const userCookieID = req.cookies["user_id"];
-  const user = users[userCookieID];
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL]["longURL"], user: user};
-
-  res.render("urls_show", templateVars); //http://localhost:8080/urls/7017cf on this page you want to render the longURL and shortURL so that is why you define it w/TemplateVars
-});
-
-//--[X]-------------DELETE ACTION: MAIN + DELETE + MAIN ---------------------USER ACCESS/COOKIE-----------
-
-//x\\ GUEST FROM CURL- if you use curl -X POST -i localhost:8080/urls/sgq3y6/delete ....
-//x\\ GUEST FROM BROWSER- expect
-
-app.post("/urls/:shortURL/delete", (req, res) => {
-  if (req.cookies["user_id"]) {
-    const userCookieID = req.cookies["user_id"];
-    const ownerID = urlDatabase[req.params.shortURL]['userID'];
-    if (userCookieID === ownerID) {
-      delete urlDatabase[req.params.shortURL];
-      res.redirect("/urls");
-    } else {
-      res.status(403).send("Error 403: Only owner of the urls can delete the url.");
-    }
+  if (userCookieID === ownerOfUrlID) {
+    return res.render("urls_show", templateVars); //http://localhost:8080/urls/7017cf on this page you want to render the longURL and shortURL so that is why you define it w/TemplateVars
   } else {
-    res.status(403).send("Error 403: User needs to be logged in to delete URLs.");
+    const errorMsg = 'ERROR 403: You do not have this link saved on your account.'
+    return res.status(403).send(errorReturnHome(errorMsg));
   }
 });
 
-// // ---------WHY DID THIS NOT WORK??? --------------------------
-// //doesn't work because it will stop at the condition statement when the cookie doesn't exist and there's no error 
-// //test with bogus short URL and see what comes out in cURL
-//   const URLtoDelete = req.params.shortURL;
-//   if (req.cookies["user_id"] === urlDatabase[URLtoDelete]["userID"]) {
-//     delete urlDatabase[URLtoDelete];  //--->  urlDatabase["b2xVn2"] = "http://www.lighthouselabs.ca"... delete "http://www.lighthouselabs.ca"// show where you want to delete it from
-//     res.redirect("/urls");
-//   } else {
-//     res.status(403).send("Error 403: Can only delete your own URLs when logged in")
-//   }
-// });
+//---------------DELETE ACTION: MAIN + DELETE + MAIN ---------------------USER ACCESS/COOKIE-----------
+
+//TEST GUEST FROM CURL- if you use curl -X POST -i localhost:8080/urls/SHORTURL/delete .. change SHORTURL to one that exists 
+
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const userCookieID = req.session["user_id"];
+  const loggedInUser = users[userCookieID];
+  const shortURL = req.params.shortURL;
+
+  if (loggedInUser) {
+    const ownerID = urlDatabase[shortURL]['userID'];
+    if (userCookieID === ownerID) {
+      delete urlDatabase[shortURL];
+      return res.redirect("/urls");
+    } else { 
+      const errorMsg = 'ERROR 403: Only owner of the URLs can delete the URl.'
+      return res.status(403).send(errorLoginSignUpLink(errorMsg));
+    }
+  } else {
+    return res.status(403).send('ERROR 403: User needs to be logged in to delete URLs.'); //won't be able to see from browser so HTML is pointless and makes curl hard to read error, therefore sending a string.
+  }
+});
 
 //---------------EDIT ACTION: SPECIFIC URL PAGE + EDIT-----------------USER ACCESS/COOKIE----------------
 ///HERE we are trying to update an edited longURL
-
-//x\\ GUEST FROM CURL- if you use curl -X POST -i localhost:8080//urls/cbb859/
-//x\\ GUEST FROM BROWSER- expect
+// TEST GUEST eg. FROM CURL -X POST -i localhost:8080//urls/cbb859 (change string to one that exists in your database)
 
 app.post("/urls/:shortURL", (req, res) => {
-//   const userCookieID = req.cookies["user_id"];
-//   if (userCookieID) {
-//     //console.log(req.params) //{ shortURL: '9sm5xK' }, you can see req params in this is for id
-//     let newLongURL = req.body.longURL;
-//     urlDatabase[req.params.id]["longURL"] = newLongURL;
-//     res.redirect("/urls/");
-//   }
-// });
-  if (req.cookies["user_id"]) {
-    const userCookieID = req.cookies["user_id"];
-    const ownerOfURL = urlDatabase[req.params.shortURL]['userID']; //something is wrong here and sometimes it works and sometimes it doesn't.... I want this to check the uRL Database
-    // console.log('ownerOfURL', ownerOfURL) //prints: u1RandomID
 
+  const userCookieID = req.session["user_id"];
+  const loggedInUser = users[userCookieID];
+  const shortURL = req.params.shortURL
+  if (loggedInUser) {
+    const ownerOfURL = urlDatabase[shortURL]['userID'];
     if (userCookieID === ownerOfURL) {
-      let newLongURL = req.body.longURL;
-      urlDatabase[req.params.shortURL]["longURL"] = newLongURL;
-      res.redirect("/urls");
-    } else {
-      res.status(403).send("Error 403: Only owner of the urls can edit the url.");
+      const newLongURL = req.body.longURL;
+      urlDatabase[shortURL]["longURL"] = newLongURL;
+      return res.redirect("/urls");
+    } else { 
+      return res.status(403).send('ERROR 403: Only the owner of the URLs can edit URLs.'); //won't be able to see from browser so HTML is pointless and makes curl hard to read error, therefore sending a string.
     }
   } else {
-    res.status(403).send("Error 403: User needs to be logged in to edit URLs.");
+    return res.status(403).send('ERROR 403: User needs to be logged in to edit URLs.'); //won't be able to see from browser so HTML is pointless and makes curl hard to read error, therefore sending a string.
   }
 });
 
 //--------------- REGISTER -------------------------PUBLIC ACCESS-------------------
 app.get("/register", (req, res) => {
-  const userCookieID = req.cookies["user_id"];
-  //console.log('userCookieID', userCookieID)
-  const user = users[userCookieID];
-  //console.log('user', user)
-  const templateVars = { user: user
+  const userCookieID = req.session["user_id"];
+  const loggedInUser = users[userCookieID];
+  const templateVars = { user: loggedInUser
   };
-  res.render("urls_register", templateVars);
+
+  if (!loggedInUser) {
+    return res.render("urls_register", templateVars);
+  }
+  res.redirect("/urls");
 });
 
 app.post("/register", (req, res) => {
@@ -261,69 +245,74 @@ app.post("/register", (req, res) => {
   const password = req.body.password;
   
   if (!email || !password) {
-    return res.status(400).send("Error 400: Email and password cannot be blank.");
+    const errorMsg = 'ERROR 400: Email and password cannot be blank.'
+    return res.status(400).send(errorLoginSignUpLink(errorMsg)); 
   }
 
-  const user = findUserByEmail(email);
+  const existingUser = findUserByEmail(email, users); //checks if that user exists in the database already
 
-  if (user) {
-    return res.status(400).send("Error 400: There is already a user signed up with that email.");
+  if (existingUser) {
+    const errorMsg = 'ERROR 400: There is already a user signed up with that email.'
+    return res.status(400).send(errorLoginSignUpLink(errorMsg));
   }
 
+//assigning new user object to user database and hashing passwords with bcrypt.
   users[randomID] = {
     id: randomID,
     email: req.body.email,
-    password: req.body.password
+    password: bcrypt.hashSync(password, salt)
   };
 
-  //console.log('users', users)
-  //prints: users {
-  //   userRandomID: { id: 'u1RandomID', email: 'u1@xfiles.com', password: '123' },
-  //   user2RandomID: { id: 'u2RandomID', email: 'u2@xfiles.com', password: 'abc' },
-  //   iaji4j: { id: 'iaji4j', email: 'k@gmail.com', password: '123' }
-  // }
-  res.cookie('user_id', randomID);
+  req.session["user_id"] = randomID;
   res.redirect("urls");
 });
 
 
 //--------------- LOGIN / LOGOUT ------------------PUBLIC ACCESS----------------------
 app.get("/login", (req, res) => {
-  const userCookieID = req.cookies["user_id"];
-  //console.log('userCookieID', userCookieID)
-  const user = users[userCookieID];
-  //console.log('user', user)
-  const templateVars = { user: user
+  const userCookieID = req.session["user_id"];
+  const loggedInUser = users[userCookieID]; //Note: checks if you are logged in by 1. checking cookie and 2. checking if you are in the database, if you are logged in and close server connection, cookie persists but database is reset, creating an issue when starting the server up again --> it sees cookie and thinks and behaves like logged in, when really you don't exist in database yet. 
+
+  const templateVars = { user: loggedInUser
   };
-  res.render("urls_login", templateVars);
+
+  if (!loggedInUser) {
+    return res.render("urls_login", templateVars);
+  }
+  return res.redirect("/urls");
 });
 
 app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  
-  if (!email || !password) {
-    return res.status(400).send("Error 400: Email and password cannot be blank.");
+
+  if (!email || !password) { 
+    const errorMsg = 'ERROR 400: Email and/or password cannot be blank';
+    return res.status(400).send(errorLoginSignUpLink(errorMsg));
   }
+  const foundUser = findUserByEmail(email, users);
 
-  const user = findUserByEmail(email);
-
-  if (!user) {
-    return res.status(403).send("Error 403: A user with that email does not exist.");
-  }
-
-  if (user.password !== password) {
-    return res.status(403).send('Error 403: Password does not match.');
-  }
-
-  res.cookie('user_id', user.id);
+  if (!foundUser) {
+    const errorMsg = 'ERROR 403: A user with that email does not exist.'
+    return res.status(403).send(errorLoginSignUpLink(errorMsg));
+  } else {
+    const validPassword = bcrypt.compareSync(password, foundUser["password"]); //make sure you compare (string/plaintext, hash)
+    if (!validPassword) { 
+      const errorMsg = 'Error 403: Password does not match.';
+      return res.status(403).send(errorLoginSignUpLink(errorMsg));
+    }
+  };
+  //NOTES: res.cookie stored things as plain text, so we decided to store it encrypted with cookie session
+  //res.cookie('user_id', user.id);
+  //req.session["user_id"] = users[key].id; //why are we using req/request and not res, because we are dealing with unencrypted value and cookie-session will return it to response
+  req.session["user_id"] = foundUser.id;
   res.redirect("urls");
 });
 
-
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
-  res.redirect("/urls/");
+  //res.clearCookie('user_id');
+  req.session = null;
+  res.redirect("/urls");
 });
 
 //--------------- OTHER COMPASS ACTIVITIES -----------------PUBLIC ACCESS---------------
@@ -340,3 +329,8 @@ app.get("/urls.json", (req, res) => {
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
+
+
+
+
+
