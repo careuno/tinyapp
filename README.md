@@ -4,15 +4,15 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["Screenshot of URL Table"](#)
+!["Screenshot of URL Table"](https://github.com/careuno/tinyapp/blob/master/docs/URL%20Table.png?raw=true)
 
-!["screenshot of Create URL"](#)
+!["screenshot of Create URL"](https://github.com/careuno/tinyapp/blob/master/docs/Create%20URL%20Page.png?raw=true)
 
-!["Screenshot of Edit URL"](#)
+!["Screenshot of Edit URL"](https://github.com/careuno/tinyapp/blob/master/docs/Edit%20URL%20Page.png?raw=true)
 
-!["Screenshot of Login Page"](#)
+!["Screenshot of Login Page"](https://github.com/careuno/tinyapp/blob/master/docs/Login%20Page.png?raw=true)
 
-!["Screenshot of Sign Up Page"](#)
+!["Screenshot of Sign Up Page"](https://github.com/careuno/tinyapp/blob/master/docs/Registration%20Page.png)
 
 ## Dependencies
 
@@ -34,4 +34,3 @@ TinyApp is a full stack web application built with Node and Express that allows 
 [] Need to change redirection when using a database with persisting data. 
 [] Need to prevent submitting empty form fields when editing URL. 
 [] Need to prevent submitting empty form fields when creating new URL. 
-
