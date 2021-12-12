@@ -31,7 +31,7 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Future Changes
 
-[] Need to change redirection when using a database with persisting data. 
-[] Need to prevent submitting empty form fields when editing URL. 
-[] Need to prevent submitting empty form fields when creating new URL. 
-[] Implement stretch features.
+- Need to change redirection when using a database with persisting data. 
+- Need to prevent submitting empty form fields when editing URL. 
+- Need to prevent submitting empty form fields when creating new URL. 
+- Implement stretch features.
